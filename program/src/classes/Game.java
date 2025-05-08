@@ -2,60 +2,44 @@ package classes;
 
 import java.util.*;
 import java.io.*;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
+import java.nio.file.*;
 
 public class Game {
-    private static final String GAMES_DIR = "src" + File.separator + "games" + File.separator;
-    private static String gameName; 
-    
-    public static void initializeGame(String gameName) {
-        gameName = gameName;
-        File gameDir = new File(GAMES_DIR + gameName);
+    private final Path gameDir;
+    private final Path stateFile;
+    private final Path turnFile;
+    private final GameManager manager;
+    private List<Card> deck = new ArrayList<>();
+    private List<User> players = new ArrayList<>();
 
-        if (!gameDir.exists()) {
-            gameDir.mkdirs();
-            File usersFile = new File(gameDir, "users.txt");
-            try {
-                usersFile.createNewFile();
-                String adminPassword = readPasswordFromConsole();
-                String hashedPassword = hashPassword(adminPassword);
-                writeAdminUserToFile(usersFile, hashedPassword);
-            } catch (IOException e) {
-                System.err.println("Error creating game files: " + e.getMessage());
-            }
-        } else {
-            System.out.println("ERROR: Cannot create game; game already exists.");
-        }
+    // Constructor to access game directory when it exists
+    public Game(String name) throws IOException {
+        gameDir = Paths.get(name);
+        if (!Files.isDirectory(gameDir)) throw new IOException("Invalid game directory: " + name);
+        manager = new GameManager(gameDir);
+        turnFile = gameDir.resolve("turn.txt");
+        stateFile = gameDir.resolve("state.txt");
     }
 
-    private static String readPasswordFromConsole() {
-        Console console = System.console();
-        if (console == null) {
-            System.out.println("Couldn't get Console instance, maybe running in an IDE. Please enter password:");
-            Scanner scanner = new Scanner(System.in);
-            return scanner.nextLine();
-        }
-        return new String(console.readPassword("Enter admin password: "));
+    /**
+     * Initialize the game: create a deck of cards, shuffle it, and deal cards to players
+     * @param name the name of the game
+     */
+    public static void initializeGame(String name) throws IOException {
+        Path dir = Paths.get(name);
+        if (Files.exists(dir)) throw new IOException("Game already exists: " + name);
+        Files.createDirectory(dir);
+        Files.createFile(dir.resolve("users.txt"));
+
+        // Write initial state to state.txt file
+        Files.createFile(dir.resolve("state.txt"));
+        Files.write(dir.resolve("state.txt"), "INITIALIZING".getBytes());
+
+        // Create a new game manager and initialize the game
+        GameManager m = new GameManager(dir);
+        m.initializeAdmin(System.console());
     }
 
-    private static String hashPassword(String password) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA3-256");
-            byte[] hash = digest.digest(password.getBytes());
-            return Base64.getEncoder().encodeToString(hash);
-        } catch (NoSuchAlgorithmException e) {
-            System.err.println("SHA3-256 algorithm not available: " + e.getMessage());
-            return null;
-        }
-    }
 
-    private static void writeAdminUserToFile(File usersFile, String hashedPassword) {
-        try (FileWriter writer = new FileWriter(usersFile)) {
-            writer.write("admin," + hashedPassword);
-        } catch (IOException e) {
-            System.err.println("Error writing admin user to file: " + e.getMessage());
-        }
-    }
+
 }
