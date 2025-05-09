@@ -75,6 +75,8 @@ public class GameManager {
         // Check for edge cases (e.g. invalid usernames) => throw exception 
         if (username == null || username.isEmpty()) throw new IllegalArgumentException("Username cannot be null or empty.");
         if (username.equalsIgnoreCase("admin")) throw new IllegalArgumentException("Username cannot be 'admin'.");
+        if (username.equalsIgnoreCase("deck")) throw new IllegalArgumentException("Username cannot be 'deck'.");
+        if (username.equalsIgnoreCase("discard")) throw new IllegalArgumentException("Username cannot be 'discard'.");
         if (username.equalsIgnoreCase("turn")) throw new IllegalArgumentException("Username cannot be 'turn'.");
         if (users.containsKey(username)) throw new IllegalArgumentException("Username already exists: " + username);
         if (users.size() > 10) throw new IllegalArgumentException("Maximum number of users reached (10).");
