@@ -78,7 +78,10 @@ public class Game {
      */
     private String readTurn() throws IOException {
         if (!Files.exists(turnFile)) throw new IllegalAccessError("Turn file doesn't exist"); 
-        return new String(Files.readAllBytes(turnFile), StandardCharsets.UTF_8);
+        String turn = new String(Files.readAllBytes(turnFile), StandardCharsets.UTF_8);
+        turn = turn.trim();
+        turn = turn.split(",")[0];
+        return new String(turn);
     }
 
     /** writeTurn: write the current turn to the turn file
@@ -125,8 +128,9 @@ public class Game {
         }
 
         String firstPlayer = users.get(0).getUsername(); // Get the first player
+        discard.add(deck.remove(0));    // Draw a card from the deck and add it to the discard pile
         writeDecks(deck, discard);
-        writeTurn(firstPlayer);
+        writeTurn(firstPlayer + ",0");        // Write the first player's turn to the turn file, hasn't drawn yet
     }
 
     /** createShuffledDeck: create a shuffled deck of cards
@@ -192,5 +196,158 @@ public class Game {
         return discard;
     }
 
+    /** getTurnOrder: get the list of players in turn order, starting who's turn it is 
+     * * @param requesterUsername the username of the player requesting the turn order
+     */
+    public void getTurnOrder(String requesterUsername) throws IOException {
+        // Verify that the requester user exists 
+        manager.requireUser(requesterUsername);
 
+        // Read the current turn from the turn file
+        String currentPlayer = readTurn();
+        if (currentPlayer.equals("admin")) throw new IllegalStateException("Game not started yet!");
+
+        // Get all players except the admin 
+        List<String> players = new ArrayList<>();
+        for (String username : manager.users.keySet()) {
+            if (username.equals("admin")) continue;
+            players.add(username);
+        }
+
+        // Reorder the list of players based on the current turn
+        List<String> turnOrder = new ArrayList<>();
+        int currentTurn = players.indexOf(currentPlayer);
+
+        // First add the current player and players after 
+        for (int i = currentTurn; i < players.size(); i++) turnOrder.add(players.get(i));
+
+        // Then add the players before the current player 
+        for (int i = 0; i < currentTurn; i++) turnOrder.add(players.get(i));
+
+        // Print the turn order
+        System.out.println("Turn order: ");
+        for (int i = 0; i < turnOrder.size(); i++) {
+            System.out.println((i + 1) + ". " + turnOrder.get(i));
+        }
+    }
+
+    /** getCards: get the cards of a player and the discard pile top card
+     * * @param userToGet the username of the user to get cards from
+     * * @param requesterUsername the username of the player requesting the cards
+     */
+    public void getCards(String userToGet, String requesterUsername) throws IOException {
+        // Verify that the requester user exists 
+        manager.requireUser(requesterUsername);
+
+        // Verify that the user has access to the cards
+        if (!(requesterUsername.equals(userToGet) || requesterUsername.equals("admin"))) {
+            throw new SecurityException("You don't have access to this user's cards: " + userToGet);
+        }
+
+        // Verify that the game has started 
+        String currentPlayer = readTurn();
+        if (currentPlayer.equals("admin")) throw new IllegalStateException("Game not started yet!");
+    
+        // Get the user's cards
+        User user = new User(userToGet, gameDir);
+        List<Card> userCards = user.getHand();
+        Card topCard = getTopCardFromDiscard();
+
+        // Print the user's cards
+        System.out.println("Cards of " + userToGet + ": ");
+        for (int i = 0; i < userCards.size(); i++) {
+            System.out.println(" " + (i+1) + ". " + userCards.get(i));
+        }
+
+        // Print the top card of the discard pile
+        System.out.println("\nTop card of the discard pile: " + topCard);
+    }
+
+    /** getTopCardFromDiscard: get the top card of the discard pile
+     * * @return the top card of the discard pile 
+     */
+    private Card getTopCardFromDiscard() throws IOException {
+        List<Card> discard = getDiscard();
+        if (discard.isEmpty()) return null;
+        return discard.get(discard.size() - 1);
+    }
+
+    /** drawCard: draw a card from the deck and add it to the user's hand
+     * * @param username the username of the user drawing the card
+     */
+    public void drawCard(String username) throws IOException {
+        manager.requireUser(username);
+        String currentPlayer = readTurn();
+        
+        // Verify that the game has started, the user is the current player, and the user has not drawn a card yet
+        if (currentPlayer.equals("admin")) throw new IllegalStateException("Game not started yet!");
+        if (!currentPlayer.equals(username)) throw new IllegalStateException("It's not your turn: " + currentPlayer);
+        if (hasDrawn(username)) throw new IllegalStateException("You have already drawn a card: " + username);
+
+        // Get the user and the deck
+        User user = new User(username, gameDir);
+        List<Card> deck = getDeck();
+        List<Card> discard = getDiscard();
+
+        // Reshuffle the deck if it's empty
+        if (deck.isEmpty()) {
+            System.out.println("Deck is empty, reshuffling the discard pile into the deck...");
+
+            // Highly unlikely to happen: 2/10 players draw card from the get go
+            Card topCard = discard.remove(discard.size() - 1); 
+            if (discard.isEmpty()) throw new IllegalStateException("Discard pile is empty, cannot reshuffle.");
+
+            // Add the remaining cards from the discard pile to the deck
+            deck.addAll(discard);
+            discard.clear(); 
+            discard.add(topCard); 
+            Collections.shuffle(deck);
+        }
+
+        // Draw a card from the deck and add it to the user's hand
+        Card drawnCard = deck.remove(deck.size() - 1);
+        user.drawCard(drawnCard);
+        writeTurn(username + "," + 1);          
+        writeDecks(deck, discard);  
+    }
+
+    /** cannotDrawCard: check if the user has already drawn a card
+     * * @param username the username of the user
+     * * @return true if the user has already drawn a card, false otherwise
+     */
+    private boolean hasDrawn(String username) throws IOException {
+        if (!Files.exists(turnFile)) throw new IllegalAccessError("Turn file doesn't exist"); 
+        String line = new String(Files.readAllBytes(turnFile), StandardCharsets.UTF_8);
+        line = line.trim();
+        String[] parts = line.split(",");
+        if (parts[1].equals("0")) return false;
+        else if (parts[1].equals("1")) return true;
+        else throw new IllegalStateException("Invalid turn file format: " + turnFile);
+    }
+
+    /** passTurn: pass the turn to the next player
+     * * @param username the username of the user passing the turn
+     */
+    public void passTurn(String username) throws IOException {
+        manager.requireUser(username);
+        String currentPlayer = readTurn();
+        
+        // Verify that the game has started and the user is the current player
+        if (currentPlayer.equals("admin")) throw new IllegalStateException("Game not started yet!");
+        if (!currentPlayer.equals(username)) throw new IllegalStateException("It's not your turn: " + currentPlayer);
+        if (!hasDrawn(username)) throw new IllegalStateException("You haven't drawn a card: " + username + " cannot pass the turn.");
+
+        // Get the list of players from the game manager excluding the admin
+        List<String> players = new ArrayList<>();
+        for (String player : manager.users.keySet()) {
+            if (player.equals("admin")) continue;
+            players.add(player);
+        }
+
+        // Find the index of the current player and pass the turn to the next player
+        int currentIndex = players.indexOf(currentPlayer);
+        int nextIndex = (currentIndex + 1) % players.size();
+        String nextPlayer = players.get(nextIndex);
+        writeTurn(nextPlayer + ",0"); 
+    }
 }

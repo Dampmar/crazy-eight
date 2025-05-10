@@ -60,15 +60,23 @@ public class Card {
     public static Card fromString(String c) {
         if (c == null || c.length() < 2 || c.length() > 3) throw new IllegalArgumentException("Invalid card string: " + c);
 
-        String r = c.substring(0, c.length() - 1);   // Get the rank part of the string
-        String s = c.substring(c.length() - 1);                 // Get the suit part of the string
+        String s = c.substring(0,1);
+        String r = c.substring(1);
 
         // Check if the rank and suit are valid
-        if (Rank.isValidRank(r) != null && Suit.isValidSuit(s) != null) { 
-            return new Card(Suit.valueOf(s), Rank.valueOf(r)); // Create a new card with the given rank and suit
-        } else {
-            throw new IllegalArgumentException("Invalid card string: " + c); // Throw exception if invalid
+        Suit suit = Suit.isValidSuit(s);
+        Rank rank = Rank.isValidRank(r);
+
+        // Make sure both are valid
+        if (suit == null || rank == null) {
+            throw new IllegalArgumentException("Invalid card string: " + c);
         }
+
+        if (suit == null || rank == null) {
+            throw new IllegalArgumentException("Invalid card string: " + c);
+        }
+
+        return new Card(suit, rank);
     }
 
     /** equals: check if two cards are equal based on their suit and rank
