@@ -59,8 +59,8 @@ public class User {
      */
     public String getUsername() { return username; }
 
-    /** hasWon: check if the user has won
+    /** hasWon: check if the user has an empty hand
      * * @return true if the user has won, false otherwise
      */
-    public boolean hasWon() { return hand.isEmpty(); } // User wins if their hand is empty
+    public boolean hasWon() { return hand.isEmpty(); } 
 }

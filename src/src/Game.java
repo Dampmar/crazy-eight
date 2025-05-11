@@ -350,4 +350,53 @@ public class Game {
         String nextPlayer = players.get(nextIndex);
         writeTurn(nextPlayer + ",0"); 
     }
+
+    /** playCard: play card from deck 
+     * * @param username the username of the user playing a card
+     */
+    public void playCard(String username, String cardString) throws IOException {
+        manager.requireUser(username);
+        String currentPlayer = readTurn();
+
+        // Verify that the game has started and the user is the current player
+        if (currentPlayer.equals("admin")) throw new IllegalStateException("Game not started yet!");
+        if (!currentPlayer.equals(username)) throw new IllegalStateException("It's not your turn: " + username);
+
+        // Get the user and the discard pile 
+        User user = new User(username, gameDir);
+        List<Card> discard = getDiscard();
+        List<Card> userCards = user.getHand();
+        Card topCard = getTopCardFromDiscard();
+
+        // Check if the card is in the user's hand
+        Card cardToPlay = null;
+        for (Card card : userCards) {
+            if (card.toString().equals(cardString)) {
+                cardToPlay = card;
+                break;
+            }
+        }
+        
+        // Check if the card is playable and in the user's hand
+        if (cardToPlay == null) throw new IllegalArgumentException("Card not found in hand: " + cardString);
+        if (!cardToPlay.isPlayable(topCard)) throw new IllegalArgumentException("Card not playable: " + cardToPlay + " on top of " + topCard);
+
+        // Remove the card from the user's hand and add it to the discard pile
+        user.discardCard(cardToPlay);
+        discard.add(cardToPlay);
+        writeDecks(getDeck(), discard); // Write the updated deck and discard pile to files
+
+        // Get the list of players from the game manager excluding the admin
+        List<String> players = new ArrayList<>();
+        for (String player : manager.users.keySet()) {
+            if (player.equals("admin")) continue;
+            players.add(player);
+        }
+
+        // Find the index of the current player and pass the turn to the next player
+        int currentIndex = players.indexOf(currentPlayer);
+        int nextIndex = (currentIndex + 1) % players.size();
+        String nextPlayer = players.get(nextIndex);
+        writeTurn(nextPlayer + ",0"); 
+    }
 }

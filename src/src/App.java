@@ -11,5 +11,6 @@ public class App {
         //game.getCards("user1", "user1");
         // game.drawCard("user1");
         // game.passTurn("user1");
+        game.playCard("admin", "D5");
     }
 }
