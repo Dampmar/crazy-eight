@@ -1,0 +1,11 @@
+@startuml 
+class Card {
+    + Suit : enum
+    + Rank : enum
+    - final suit : Suit 
+    - final rank : Rank
+    
+}
+
+
+@enduml

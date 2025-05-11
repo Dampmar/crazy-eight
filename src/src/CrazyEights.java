@@ -70,6 +70,9 @@ public class CrazyEights {
                 case "--pass": 
                     flags.put("pass", ""); 
                     break;
+                case "--cards": 
+                    flags.put("cards", args[++i].trim()); 
+                    break;
                 default: 
                     throw new IllegalArgumentException("Unknown argument: " + args[i]);
             }
