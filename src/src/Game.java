@@ -398,5 +398,23 @@ public class Game {
         int nextIndex = (currentIndex + 1) % players.size();
         String nextPlayer = players.get(nextIndex);
         writeTurn(nextPlayer + ",0"); 
+
+        // If the use has won the game reset the game, and delete or clear the game files depending on the functionality
+        if (user.hasWon()) {
+            System.out.println("User " + username + " has won the game!");
+
+            // Delete all player hand files
+            for (String player : players) {
+                if (player.equals("admin")) continue;
+                Files.deleteIfExists(gameDir.resolve(player + ".txt"));
+            }
+            
+            // Clear deck and discard files but keep them
+            Files.write(deckFile, new byte[0], StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.write(discardFile, new byte[0], StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+
+            // Set turn to admin 
+            writeTurn("admin");
+        }
     }
 }
