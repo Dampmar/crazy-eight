@@ -38,7 +38,7 @@ public class User {
     }
 
     /** saveHand: save the user's hand to a file */
-    public void saveHand() {
+    private void saveHand() {
         try {
             List<String> lines = new ArrayList<>();
             for (Card c : hand) lines.add(c.toString());

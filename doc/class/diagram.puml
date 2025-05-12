@@ -1,11 +1,90 @@
 @startuml 
 class Card {
-    + Suit : enum
-    + Rank : enum
-    - final suit : Suit 
-    - final rank : Rank
-    
+    - final Suit suit 
+    - final Rank rank 
+    + isPlayable(otherCard : Card) : boolean
+    + toString() : String 
+    + {static} fromString(c : String) : Card
+    + equals(obj : Object) : boolean
+    + getRank() : Rank
 }
 
+enum Card$Suit {
+  - final String suit
+  + getSuit(): String
+  + {static} isValidSuit(suit: String): Suit
+}
+
+enum Card$Rank {
+  - final String rank
+  + getRank(): String
+  + {static} isValidRank(rank: String): Rank
+}
+
+class User {
+  - final String username
+  - final Path userFilePath
+  - final List<Card> hand
+  + drawCard(card: Card)
+  + discardCard(card: Card)
+  + getHand(): List<Card>
+  + hasWon(): boolean
+  + getUsername(): String
+  - saveHand()
+  - loadHand()
+}
+
+class Game {
+  - {static} final String GAMES_FOLDER
+  - final Path gameDir
+  - final Path deckFile
+  - final Path discardFile
+  - final Path turnFile
+  - final GameManager manager
+  + Game(name: String)
+  + {static} init(name: String)
+  + addUser(username: String)
+  + removeUser(username: String)
+  - readTurn(): String
+  - writeTurn(turn: String)
+  + startGame()
+  - createShuffledDeck(): List<Card>
+  - writeDecks(deck: List<Card>, discard: List<Card>)
+  + getDeck(): List<Card>
+  + getDiscard(): List<Card>
+  + getTurnOrder(requesterUsername: String)
+  + getCards(userToGet: String, requesterUsername: String)
+  - getTopCardFromDiscard(): Card
+  + drawCard(username: String)
+  - hasDrawn(username: String): boolean
+  + passTurn(username: String)
+  + playCard(username: String, cardString: String)
+}
+
+class GameManager {
+  - final Path usersFilePath
+  + final Map<String, String> users
+  + GameManager(gameDir: Path)
+  + initGame(console: Console)
+  - {static} getPassword(console: Console, username: String): String
+  - {static} hashPassword(password: String): String
+  - saveUsers()
+  + addUser(username: String)
+  + removeUser(username: String)
+  + requireUser(username: String): boolean
+}
+
+class CrazyEights {
+  + {static} main(args: String[])
+  - {static} parseArgs(args: String[]): Map<String, String>
+}
+
+CrazyEights "1" --> "*" Game : "coordinates"
+Game "1" --> "1" GameManager : "contains"
+Game "1" --> "*" Card : "manages"
+Game "1" --> "*" User : "coordinates"
+User "*" --> "*" Card : "stores"
+Card +-- Card$Suit 
+Card +-- Card$Rank
 
 @enduml
